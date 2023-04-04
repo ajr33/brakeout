@@ -41,17 +41,12 @@ angle:	.byte	1
     .global illuminate_RGB_LED
     .global show_player_time
     .global drawBoard
+    .global	storePlayerColor
 
 ;p_moveState:		.word	moveState
 ;p_moveData:			.word	moveData
 
-;rgb constants
-rgbRed:			.equ	0x2
-rgbWhite:		.equ	0xE
-rgbPurple:		.equ	0x6
-rgbBlue:		.equ	0x4
-rgbGreen:		.equ	0x8
-rgbYellow:		.equ	0xA
+
 
 
 pVMove:		.word	vMovement
@@ -409,6 +404,9 @@ sc10:	; special case 10
 
 
 blockHit:
+	; find the color that was hit
+	bl		storePlayerColor
+
 	; same as validSpace but update player's movement
 	; update movement the same as hBlockHit
 	;store new state

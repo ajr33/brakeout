@@ -19,6 +19,12 @@ moveData:		.byte	0, -10, -11, -12, -9, -8, 10, 9, 8, 11, 12
 ; time the paddle will go.
 nextState:		.byte	3
 
+prompt90:			.string 27, "[20;2H", 27, "[40m", "90         ", 0
+left45Prompt:		.string 27, "[20;2H", 27, "[40m", "45 Left    ", 0
+left30Prompt:		.string 27, "[20;2H", 27, "[40m", "30 Left    ", 0
+right45Prompt:		.string 27, "[20;2H", 27, "[40m", "45 Right   ", 0
+right30Prompt:		.string 27, "[20;2H", 27, "[40m", "30 Right   ", 0
+
 
 ; black background
 blackBg:			.string 		 27, "[40m",0
@@ -53,6 +59,7 @@ paddleLine:		.byte	0xC, 0x7, 0x7, 0x7, 0x7, 0xF, 0x7, 0x7, 0x7, 0xC
 				.byte 	0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB
 				.byte  	0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0xB, 0 ; terminator
 
+
 redBlock:			.string 		27, "[101m       ", 0
 greenBlock:			.string 		27, "[102m       ", 0
 yellowBlock:		.string 		27, "[103m       ", 0
@@ -67,12 +74,12 @@ paddle45:				.string			27, "[104m_", 0
 paddle30:				.string			27, "[105m_", 0
 paddle90:				.string			27, "[106m___", 0
 
-redPlayer:			.string 		27, "[100m  ",27, "[101m X ", 27, "[100m  ", 0
-greenPlayer:		.string 		27, "[102m X ", 0
-yellowPlayer:		.string 		27, "[103m X ", 0
-bluePlayer:			.string 		27, "[104m X ", 0
-purplePlayer:		.string 		27, "[105m X ", 0
-whitePlayer:		.string 		27, "[107m X ", 0
+redPlayer:			.string 		27, "[100m  ", 27, "[101m X ", 27, "[100m  ", 0
+greenPlayer:		.string 		27, "[100m  ", 27, "[102m X ", 27, "[100m  ", 0
+yellowPlayer:		.string 		27, "[100m  ", 27, "[103m X ", 27, "[100m  ", 0
+bluePlayer:			.string 		27, "[100m  ", 27, "[104m X ", 27, "[100m  ", 0
+purplePlayer:		.string 		27, "[100m  ", 27, "[105m X ", 27, "[100m  ", 0
+whitePlayer:		.string 		27, "[100m  ", 27, "[107m X ", 27, "[100m  ", 0
 
 
 hBorder:		.string			27, "[100m______", 0
@@ -85,6 +92,13 @@ vBorder:		.string			27, "[100m| ",0
 ;			5 - purple,
 ;			6 - white
 playerColor:		.byte	0x1
+;rgb constants
+rgbRed:			.equ	0x2
+rgbWhite:		.equ	0xE
+rgbPurple:		.equ	0x6
+rgbBlue:		.equ	0x4
+rgbGreen:		.equ	0x8
+rgbYellow:		.equ	0xA
 
 
 playerFullPos:		.string 	27, "[11;25H", 0
@@ -100,7 +114,9 @@ newPos:				.string		27, "[?25l", 27, "[", "0", "1", ";", "0", "1","H", 0
 	.global timer0_init
 	.global output_string
 	.global	output_character
+	.global illuminate_RGB_LED
 	.global drawBoard
+	.global	storePlayerColor
 
 ; the current state of the movement
 ; note that the move data is +1 after this state.
@@ -154,6 +170,13 @@ p_playerColor:		.word	playerColor
 p_playerFullPos:	.word	playerFullPos
 p_newPos:			.word 	newPos
 
+
+; paddle angle prompts
+p_90Prompt:				.word	prompt90
+p_45LeftPrompt:			.word	left45Prompt
+p_30LeftPrompt:			.word	left30Prompt
+p_45RightPrompt:		.word	right45Prompt
+p_30RightPrompt:		.word	right30Prompt
 
 
 
@@ -297,8 +320,8 @@ drawSpace:
 drawPaddle:
 	ldr		r0, p_paddle
 	bl		output_string
-	;sub		r3, #1
 	b		checkData
+
 
 drawPlayer:
 	bl		getPlayerColor	; returns address into r0
@@ -333,7 +356,46 @@ drawVerticalBorder:
 	b		checkData
 
 endDataToBoard:
+	; lastly print the paddle angle direction
+	ldrb	r0, [r8]
 
+	cmp		r0, #1
+	beq		print90
+
+	cmp		r0, #2
+	beq		print45Left
+
+	cmp		r0, #3
+	beq		print30Left
+
+	cmp		r0, #4
+	beq		print45Right
+
+	; print 30 right
+	ldr		r0, p_30RightPrompt
+	bl		output_string
+	b		anglePrintDone
+
+print90:
+	ldr		r0, p_90Prompt
+	bl		output_string
+	b		anglePrintDone
+
+print45Left:
+	ldr		r0, p_45LeftPrompt
+	bl		output_string
+	b		anglePrintDone
+
+print30Left:
+	ldr		r0, p_30LeftPrompt
+	bl		output_string
+	b		anglePrintDone
+
+print45Right:
+	ldr		r0, p_45RightPrompt
+	bl		output_string
+
+anglePrintDone:
 	pop		{r4, lr}
 	mov		pc, lr
 
@@ -349,6 +411,7 @@ endDataToBoard:
 ; returns r0 with the address of the correct color to display for the player
 ; colors: 1 - red, 2 - green, 3 - yellow, 4 - blue, 5 - purple, 6 - white
 getPlayerColor:
+	push	{lr}
 	ldr		r1, p_playerColor
 	ldrb	r0, [r1]
 
@@ -369,31 +432,50 @@ getPlayerColor:
 
 	; not anything else, just set to white then
 
+	mov		r0, #rgbWhite
+	bl		illuminate_RGB_LED
 	ldr		r0, p_whitePlayer
 	b		endGetPlayerColor
 
 playerIsRed:
+	mov		r0, #rgbRed
+	bl		illuminate_RGB_LED
 	ldr		r0, p_redPlayer
 	b		endGetPlayerColor
 
 playerIsGreen:
+	mov		r0, #rgbGreen
+	bl		illuminate_RGB_LED
 	ldr		r0, p_greenPlayer
 	b		endGetPlayerColor
 
 playerIsYellow:
+	mov		r0, #rgbYellow
+	bl		illuminate_RGB_LED
 	ldr		r0, p_yellowPlayer
 	b		endGetPlayerColor
 
 playerIsBlue:
+	mov		r0, #rgbBlue
+	bl		illuminate_RGB_LED
 	ldr		r0, p_bluePlayer
 	b		endGetPlayerColor
 
 playerIsPurple:
+	mov		r0, #rgbPurple
+	bl		illuminate_RGB_LED
 	ldr		r0, p_purplePlayer
 
 endGetPlayerColor:
+	pop		{lr}
 	mov		pc, lr
 
+
+; r0 should have the color to store.
+storePlayerColor:
+	ldr		r1, p_playerColor
+	strb	r0, [r1]
+	mov		pc, lr
 
 
 	.end
