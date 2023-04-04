@@ -179,7 +179,7 @@ p_45RightPrompt:		.word	right45Prompt
 p_30RightPrompt:		.word	right30Prompt
 
 
-
+; i like cars so the name of this game is spelled brakeout.
 brakeout:
 	; init timer
 
