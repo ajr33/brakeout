@@ -10,3 +10,10 @@ Debug/subdir_rules.mk
 Debug/subdir_vars.mk
 Debug/timer.obj
 Debug/uart.obj
+Debug/tm4c123gh6pm_startup_ccs.obj
+Debug/tm4c123gh6pm_startup_ccs.d
+Debug/main.obj
+Debug/main.d
+Debug/brakeout_linkInfo.xml
+Debug/brakeout.out
+Debug/brakeout.map
