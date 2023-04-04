@@ -15,6 +15,7 @@ user_entry:         .byte   0               ; Holds keypad interrupt value
     .global output_string
     .global int2string
     .global string2int
+    .global	increaseSpeed
 
     .global user_entry
 
@@ -222,7 +223,15 @@ UART0_Handler:
 	cmp		r0, #'D'
 	beq		movePaddleRight
 
+	cmp		r0, #' '
+	beq		speedUp
+
 	b		paddleMoveEnd	; if another key was pressed
+speedUp:
+
+	bl		increaseSpeed
+
+	b		paddleMoveEnd
 
 movePaddleLeft:
 	; r9 holds pointer to paddleLine from brakeout.s

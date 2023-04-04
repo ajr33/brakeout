@@ -42,6 +42,7 @@ angle:	.byte	1
     .global show_player_time
     .global drawBoard
     .global	storePlayerColor
+    .global	increaseSpeed
 
 ;p_moveState:		.word	moveState
 ;p_moveData:			.word	moveData
@@ -509,5 +510,31 @@ Timer_Handler_return:
 
     pop     {r4-r11, lr}
     bx      lr
+
+
+increaseSpeed:
+	;set r1 to timer 0 base address
+	MOV     r1, #0x0000
+	MOVT    r1, #0x4003
+
+	;Disable the timer
+	;load current status
+	LDRB    r0, [r1, #GPTMCTL]
+	AND     r0, r0, #0x0		        ;set bit 0 to 1
+	STRB    r0, [r1, #GPTMCTL]          ;disable timer 0 (A) for setup
+
+	;set interval period
+	;load current status
+	LDR     r0, [r1, #GPTMTAILR]
+	MOV     r0, #0x0900				    ;set r2 to 4 million
+	MOVT    r0, #0x003D			        ;for 4 timer interrupts a second
+	STR     r0, [r1, #GPTMTAILR] 	    ;set interval period for timer A
+
+	;enable timer
+	LDRB    r0, [r1, #0xC]
+	ORR     r0, r0, #0x3		        ; set bit 0 to 1, set bit 1 to 1 to allow debugger to stop timer
+	STRB    r0, [r1, #0xC]            	; enable timer 0 (A) for use
+
+	mov		pc, lr
 
     .end
