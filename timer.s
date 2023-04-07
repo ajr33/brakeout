@@ -260,6 +260,7 @@ Timer0_Handler:
 	;r7 hold moves state from brakeout.s
 	ldrb	r0, [r7]
 
+
 	;save current pointer
 	push	{r4}
 	;mov		r9, #0
@@ -282,7 +283,60 @@ checkBoard:
 
 	bl		findPlayer ; modifies r4
 
+	; check if the player is going down.
+	ldrb	r0, [r7]
+	cmp		r0, #6
+	bge		goingDown
+
 	ldrb	r0, [r4, r2]
+	b		newSpaceCheck
+
+
+goingDown:
+	ldrb	r0, [r4, r2]
+	; check if we should check where the paddle is
+	cmp		r4, r10
+	blt		newSpaceCheck
+
+	; if going down, look directly below.
+	; that is an offset of 10
+	ldrb	r0, [r4, #10]
+
+	cmp		r0, #0xF
+	bne		missedPaddle
+
+	; get the valid paddle number
+	ldrb	r0, [r11]
+
+
+	cmp		r0, #1
+	beq		left30
+
+	cmp		r0, #2
+	beq		left45
+
+	cmp		r0, #03
+	beq		up90
+	cmp		r0, #04
+	beq		up90
+	cmp		r0, #05
+	beq		up90
+
+	cmp		r0, #06
+	beq		right45
+
+	cmp		r0, #0x7
+	beq		right30
+
+	b		timer0_done
+
+missedPaddle:
+	; missed paddle
+	cmp		r0, #0xB
+	beq		dummyDone
+
+
+	b		timer0_done
 
 newSpaceCheck:
 	cmp		r0, #0x7
@@ -293,6 +347,8 @@ newSpaceCheck:
 
 	cmp		r0, #0xC
 	beq		vBorderHit
+	cmp		r0, #0xC1
+	beq		vBorderHit
 
 	cmp		r0, #0xF
 	beq		paddleHit
@@ -300,6 +356,31 @@ newSpaceCheck:
 	;bgt		paddleHit
 
 	b		blockHit
+left30:
+	mov		r0, #3
+	strb	r0, [r7]
+	b		checkBoard
+
+left45:
+	mov		r0, #2
+	strb	r0, [r7]
+	b		checkBoard
+
+up90:
+	mov		r0, #1
+	strb	r0, [r7]
+	b		checkBoard
+
+right45:
+	mov		r0, #4
+	strb	r0, [r7]
+	b		checkBoard
+
+right30:
+	mov		r0, #5
+	strb	r0, [r7]
+	b		checkBoard
+
 
 paddleHit:
 
@@ -432,6 +513,11 @@ validSpace:
 	; update players position
 	mov		r0, #0xA
 	strb	r0, [r4, r2] ; r2 still holds offset
+	b		timer0_done
+
+dummyDone:
+	mov		r0, #0xF
+
 
 timer0_done:
 	pop		{r4}

@@ -16,6 +16,9 @@ user_entry:         .byte   0               ; Holds keypad interrupt value
     .global int2string
     .global string2int
     .global	increaseSpeed
+    .global movePaddleLeft
+	.global	movePaddleRight
+
 
     .global user_entry
 
@@ -213,15 +216,15 @@ UART0_Handler:
 	ldrb	r0, [r1]
 
 	cmp		r0, #'a'
-	beq		movePaddleLeft
+	beq		startPaddleLeft
 	cmp		r0, #'A'
-	beq		movePaddleLeft
+	beq		startPaddleLeft
 
 
 	cmp		r0, #'d'
-	beq		movePaddleRight
+	beq		startPaddleRight
 	cmp		r0, #'D'
-	beq		movePaddleRight
+	beq		startPaddleRight
 
 	cmp		r0, #' '
 	beq		speedUp
@@ -233,52 +236,17 @@ speedUp:
 
 	b		paddleMoveEnd
 
-movePaddleLeft:
+startPaddleLeft:
 	; r9 holds pointer to paddleLine from brakeout.s
-	; we need to first find where the paddle is.
-	add		r2, r9, #1		; save the beginning of the paddle line
-	bl		findPaddle	; updates r2 & r9
+	bl		movePaddleLeft
 
-	cmp		r2, r9
-	bge		paddleMoveEnd
-
-	; make sure that the player isn't in the new paddle location
-	ldrb	r0, [r9, #-1]
-	cmp		r0, #0xA
-	beq		paddleMoveEnd
-
-	; store a space where the paddle was
-	; and update the new location
-	mov		r0, #0x7
-	strb	r0, [r9]
-	mov		r0, #0xF
-	strb	r0, [r9, #-1]
 	b		paddleMoveEnd
 
-movePaddleRight:
+startPaddleRight:
 
-	; first find the paddle
-	bl		findPaddle	; updates r9
-	; now find the end of the paddle line
-	bl		findEndOfPaddle ; updates r1
+	bl		movePaddleRight
 
-
-	; if moving right is outside the paddle line, do nothing
-	cmp		r9, r1
-	bge		paddleMoveEnd
-
-	; make sure that the player isn't in the new paddle location
-	ldrb	r0, [r9, #1]
-	cmp		r0, #0xA
-	beq		paddleMoveEnd
-
-	; store a space where the paddle was
-	; and update the new location
-	mov		r0, #0x7
-	strb	r0, [r9]
-	mov		r0, #0xF
-	strb	r0, [r9, #1]
-
+	b		paddleMoveEnd
 
 paddleMoveEnd:
 	; Restore registers
